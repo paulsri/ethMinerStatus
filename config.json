@@ -1,0 +1,11 @@
+{
+  "port": "8080",
+  "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "telegramAPIKey": "123456789:ABC_0000000000000000000000000000000",
+  "telegramChatID": "-123456789",
+  "miners": [
+      "miner1",
+      "miner2",
+      "miner3"
+  ]
+}
