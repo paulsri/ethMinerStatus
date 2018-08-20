@@ -21,7 +21,8 @@ func showDashboard(w http.ResponseWriter, r *http.Request){
 
     primeThePump()
     balance, data := retrieveAllData()
-    reportBlockNumber, report, minerCount := analyzeData(data)
+    reportBlockNumber, blockError, report, minerCount := analyzeData(data)
+    fmt.Println("blockError: ", blockError)
 
     fmt.Fprintf(w,"<!DOCTYPE html> <html> <head> <title>Miner Dashboard</title> </head> <body>")
 
@@ -204,7 +205,7 @@ func makeRequest(miner string, jsonMethod []byte, timeoutMS int) string {
     return string(body)
 }
 
-func analyzeData(data [][]string) (map[string]int, map[string]int, int) {
+func analyzeData(data [][]string) (map[string]int, bool, map[string]int, int) {
     var reportBlockNumber map[string]int
     reportBlockNumber = make(map[string]int)
     var report map[string]int
@@ -246,13 +247,23 @@ func analyzeData(data [][]string) (map[string]int, map[string]int, int) {
       }
     }
 
+    // reportBlockNumber error
+    var blockErrorState bool = false
+    numberBlockErrors := len(reportBlockNumber)
+    // fmt.Println("reportBlockNumber Count: ", numberBlockErrors)
+    if numberBlockErrors > 1 {
+      blockErrorState = true
+      fmt.Printf("Block Histogram Error Identified!: %d Different Blocks Being Mined!\n", numberBlockErrors)
+    }
+    // fmt.Println("blockErrorState: ", blockErrorState)
+
     // miner count
     minerCount := 0
     for _, valuePeers := range report {
       minerCount = minerCount + valuePeers
     }
 
-    return reportBlockNumber, report, minerCount
+    return reportBlockNumber, blockErrorState, report, minerCount
 }
 
 func primeThePump() {
@@ -273,7 +284,7 @@ func telegram() {
   for {
     primeThePump()
     balance, data := retrieveAllData()
-    reportBlockNumber, report, minerCount := analyzeData(data)
+    reportBlockNumber, blockError, report, minerCount := analyzeData(data)
 
     newLine := "%0A"
     doubleNewLine := "%0A%0A"
@@ -317,9 +328,17 @@ func telegram() {
     // final telegram request
     tgRequest := tgURL + tgAPIKey + tgEndpoint + tgChatID + tgParameter + tgReportHeader + tgReport
 
-    _, err := http.Get(tgRequest)
-    if err != nil {
-      log.Print(err)
+    if blockError == true {
+      _, err := http.Get(tgRequest)
+      if err != nil {
+        log.Print(err)
+      }
+    } else {
+      tgRequest := tgURL + tgAPIKey + tgEndpoint + tgChatID + tgParameter + "Everything's Fine"
+      _, err := http.Get(tgRequest)
+      if err != nil {
+        log.Print(err)
+      }
     }
 
     time.Sleep(3600 * time.Second)
