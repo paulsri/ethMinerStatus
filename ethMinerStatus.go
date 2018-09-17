@@ -21,7 +21,7 @@ func showDashboard(w http.ResponseWriter, r *http.Request){
 
     primeThePump()
     balance, data := retrieveAllData()
-    reportBlockNumber, blockError, report, minerCount := analyzeData(data)
+    reportBlockNumber, blockError, report, minerCount, zeroBlockMiners := analyzeData(data)
     fmt.Println("blockError: ", blockError)
 
     fmt.Fprintf(w,"<!DOCTYPE html> <html> <head> <title>Miner Dashboard</title> </head> <body>")
@@ -45,6 +45,7 @@ func showDashboard(w http.ResponseWriter, r *http.Request){
       fmt.Fprintln(w, keyBlock + ": " + strconv.Itoa(valueBlock))
       fmt.Fprintln(w,"<br>")
     }
+    fmt.Fprintln(w, zeroBlockMiners)
 
     fmt.Fprintln(w,"<br>")
 
@@ -99,7 +100,7 @@ func retrieveAllData () (string, [][]string) {
       currentPeers := extractResult(singleMinerResponse[1])
       currentWallet := extractResult(singleMinerResponse[2])
 
-      miner2DData = append(miner2DData, []string{hexToInt(currentBlock), hexToInt(currentPeers), currentWallet})
+      miner2DData = append(miner2DData, []string{miners[i], hexToInt(currentBlock), hexToInt(currentPeers), currentWallet})
     }
 
     return bigHexToInt(currentBalance), miner2DData
@@ -205,11 +206,13 @@ func makeRequest(miner string, jsonMethod []byte, timeoutMS int) string {
     return string(body)
 }
 
-func analyzeData(data [][]string) (map[string]int, bool, map[string]int, int) {
+func analyzeData(data [][]string) (map[string]int, bool, map[string]int, int, string) {
     var reportBlockNumber map[string]int
     reportBlockNumber = make(map[string]int)
     var report map[string]int
     report = make(map[string]int)
+
+    zeroBlockMiners := "Zero Block Miners: "
 
     report["Peers Bucket A: 0"] = 0
     report["Peers Bucket B: 1"] = 0
@@ -221,10 +224,15 @@ func analyzeData(data [][]string) (map[string]int, bool, map[string]int, int) {
 
     for i := 0; i < len(data); i++ {
       // block number
-      reportBlockNumber["Block Number: " + data[i][0]]++
+      reportBlockNumber["Block Number: " + data[i][1]]++
+
+      // keep track of miners mining 0 blocks
+      if data[i][1] == strconv.Itoa(0) {
+        zeroBlockMiners = zeroBlockMiners + data[i][0] + " "
+      }
 
       // peers
-      peers, err := strconv.Atoi(data[i][1])
+      peers, err := strconv.Atoi(data[i][2])
 
       if err != nil {
         log.Print(err)
@@ -263,7 +271,7 @@ func analyzeData(data [][]string) (map[string]int, bool, map[string]int, int) {
       minerCount = minerCount + valuePeers
     }
 
-    return reportBlockNumber, blockErrorState, report, minerCount
+    return reportBlockNumber, blockErrorState, report, minerCount, zeroBlockMiners
 }
 
 func primeThePump() {
@@ -284,7 +292,7 @@ func telegram() {
   for {
     primeThePump()
     balance, data := retrieveAllData()
-    reportBlockNumber, blockError, report, minerCount := analyzeData(data)
+    reportBlockNumber, blockError, report, minerCount, zeroBlockMiners := analyzeData(data)
 
     newLine := "%0A"
     doubleNewLine := "%0A%0A"
@@ -300,11 +308,12 @@ func telegram() {
     tgReportHeader := url.QueryEscape("ethMinerStatus Hourly Report") + newLine
     tgReport       := ""
 
-    // header: bucket number
+    // header: block bucket number
     tgReport = tgReport + newLine + url.QueryEscape("Section: Block Number")
     for keyBlock, valueBlock := range reportBlockNumber {
       tgReport = tgReport + newLine + keyBlock + url.QueryEscape(": ") + strconv.Itoa(valueBlock)
     }
+    tgReport = tgReport + newLine + zeroBlockMiners
 
     // sort map by keys
     var keys []string
