@@ -45,7 +45,7 @@ func showDashboard(w http.ResponseWriter, r *http.Request){
       fmt.Fprintln(w, keyBlock + ": " + strconv.Itoa(valueBlock))
       fmt.Fprintln(w,"<br>")
     }
-    fmt.Fprintln(w, zeroBlockMiners)
+    fmt.Fprintln(w, zeroBlockMiners + "<br>")
 
     fmt.Fprintln(w,"<br>")
 
