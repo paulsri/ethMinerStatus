@@ -76,9 +76,9 @@ func showDashboard(w http.ResponseWriter, r *http.Request){
       fmt.Fprintln(w, "<tr>")
       fmt.Fprintf(w, "<td>" + strconv.Itoa(i+1) + "</td>")
       fmt.Fprintf(w, "<td>" + miners[i] + "</td>")
-      fmt.Fprintln(w, "<td>" + data[i][0] + "</td>")
       fmt.Fprintln(w, "<td>" + data[i][1] + "</td>")
       fmt.Fprintln(w, "<td>" + data[i][2] + "</td>")
+      fmt.Fprintln(w, "<td>" + data[i][3] + "</td>")
       fmt.Fprintln(w, "</tr>")
     }
 
